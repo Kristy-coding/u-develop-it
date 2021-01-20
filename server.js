@@ -1,4 +1,4 @@
-
+const inputCheck = require('./utils/inputCheck');
 //import SQLite database 
 //This statement sets the execution mode to verbose to produce messages in the terminal regarding the state of the runtime. This feature can help explain what the application is doing, specifically SQLite.
 const sqlite3 = require('sqlite3').verbose();
@@ -101,22 +101,41 @@ app.delete('/api/candidate/:id', (req, res) => {
     });
   });
 
+// // Create a candidate 
+
+// {body} is just the destructored form of req.body (we are just pulling the body property out of the request obj)
+//Until now, we've been passing the entire request object to the routes in the req parameter
 
 
+    // validate the user data 
+    //If the inputCheck() function returns an error, an error message is returned to the client as a 400 status code, to prompt for a different user request with a JSON object that contains the reasons for the errors. In order to use this function, we must import the module first. Place the following import statement near the top of the server.js file:
 
 
-// ----- query for create a candidate ---- //
 // Create a candidate
-// const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected) 
-//               VALUES (?,?,?,?)`;
-// const params = [1, 'Ronald', 'Firbank', 1];
-// // ES5 function, not arrow function, to use this
-// db.run(sql, params, function(err, result) {
-//   if (err) {
-//     console.log(err);
-//   }
-//   console.log(result, this.lastID);
-// });
+app.post('/api/candidate', ({ body }, res) => {
+    const errors = inputCheck(body, 'first_name', 'last_name', 'industry_connected');
+    if (errors) {
+      res.status(400).json({ error: errors });
+      return;
+    }
+  
+    const sql =  `INSERT INTO candidates (first_name, last_name, industry_connected) 
+                  VALUES (?,?,?)`;
+    const params = [body.first_name, body.last_name, body.industry_connected];
+    // ES5 function, not arrow function, to use this
+    db.run(sql, params, function(err, result) {
+      if (err) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+  
+      res.json({
+        message: 'success',
+        data: body,
+        id: this.lastID
+      });
+    });
+  });
 
 
 //Default response for any other request(Not Found) Catch all
