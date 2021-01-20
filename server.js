@@ -5,6 +5,7 @@ const sqlite3 = require('sqlite3').verbose();
 
 // connect to database
 //We created a new object, db. This instance was created with the election.db file. The callback function informs us if there's an error in the connection.
+//The sqlite3.Database() returns a Database object and opens the database connection automatically. When you create this object you get access to it's methods (.all(), run(), get()etc.)
 const db = new sqlite3.Database('./db/election.db', err => {
     if (err) {
         return console.error(err.message);
@@ -15,6 +16,7 @@ const db = new sqlite3.Database('./db/election.db', err => {
 
 // set up express connection...
 const express = require('express');
+//const { param } = require('../zookeepr/routess/apiRoutes');
 
 const PORT = process.env.PORT || 3001;
 const app = express();
@@ -35,43 +37,86 @@ app.use(express.json());
 
 //-------- creat Query to read all potential candidates using all() method -----//
 
-// db.all(`SELECT * FROM candidates`, (err, rows) => {
-//     console.log(rows);
-//   });
+// Get all candidates 
+app.get('/api/candidates', (req, res) => {
+    const sql = `SELECT * FROM candidates`;
+    const params = [];
+    // data base call 
+    //We use the all() method from the database object to retrieve all the rows in the database
+    db.all(sql, params, (err, rows)=> {
+        if (err) {
+            res.status(500).json({error: err.message});
+            // empty return to exit out of function
+            return;
+        }
+        // instead of logging the result, rows, from the database, we'll send this response as a JSON object to the browser, using res in the Express.js route callback
+        res.json({
+            message: 'success',
+            data: rows
+        });
+    });
+});
 
 // ------- Create Query to read single candidate using .get() method ----- //
 
-// db.get(`SELECT * FROM candidates WHERE id = 1`, (err, row)=> {
-//     if (err) {
-//         console.log(err);
-//     }
-//     console.log(row);
-// })
+// Get single candidate
+app.get('/api/candidate/:id', (req, res) => {
+    const sql = `SELECT * FROM candidates 
+                 WHERE id = ?`;
+    const params = [req.params.id];
+    db.get(sql, params, (err, row) => {
+      if (err) {
+        res.status(400).json({ error: err.message });
+        return;
+      }
+  
+      res.json({
+        message: 'success',
+        data: row
+      });
+    });
+  });
 
 // ----- create query for delete operation using run() method ---- //
 // the squlite run() method will execute an SQL query but won't retrieve any data result
 
 // Delete a candidate 
 // The question mark (?) denotes a placeholder, making this a prepared statement. Prepared statements can have placeholders that can be filled in dynamically with real values at runtime.
-// db.run(`DELETE FROM candidates WHERE id = ?`, 1, function(err, result) {
-//     if (err) {
-//       console.log(err);
-//     }
-//     console.log(result, this, this.changes);
-//   });
+
+// Delete a candidate
+app.delete('/api/candidate/:id', (req, res) => {
+    const sql = `DELETE FROM candidates WHERE id = ?`;
+    const params = [req.params.id];
+    db.run(sql, params, function(err, result) {
+      if (err) {
+        res.status(400).json({ error: res.message });
+        return;
+      }
+  
+      res.json({
+        message: 'successfully deleted',
+        //this refers to the database? scoped in the function? When using arrow functions its scoped one above/globally?
+        changes: this.changes
+      });
+    });
+  });
+
+
+
+
 
 // ----- query for create a candidate ---- //
 // Create a candidate
-const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected) 
-              VALUES (?,?,?,?)`;
-const params = [1, 'Ronald', 'Firbank', 1];
-// ES5 function, not arrow function, to use this
-db.run(sql, params, function(err, result) {
-  if (err) {
-    console.log(err);
-  }
-  console.log(result, this.lastID);
-});
+// const sql = `INSERT INTO candidates (id, first_name, last_name, industry_connected) 
+//               VALUES (?,?,?,?)`;
+// const params = [1, 'Ronald', 'Firbank', 1];
+// // ES5 function, not arrow function, to use this
+// db.run(sql, params, function(err, result) {
+//   if (err) {
+//     console.log(err);
+//   }
+//   console.log(result, this.lastID);
+// });
 
 
 //Default response for any other request(Not Found) Catch all
